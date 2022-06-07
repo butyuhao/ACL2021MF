@@ -23,25 +23,24 @@ class CommonGenDataset(Dataset):
 		np.set_printoptions(threshold=sys.maxsize)
 		self.read_content(json_path)
 
-	def read_content(self, json_path):
+	def read_content(self, json_path): # json文件 有几个概念词，然后有三句用概念词造的句子。
 		print("reading data from %s ..." % json_path)
 		self.record = []
 		with open(json_path) as out:
 			lines = out.readlines()
 			for l in tqdm(lines):
 				item = json.loads(l.strip())
-				concept_set = ' '.join(item['concept_set'].split('#'))
 				concept_set = 'generate a sentence with these concepts : '
 				concept_set_input_ids = self.tokenizer(concept_set, return_tensors="np")['input_ids'][0, :-1].tolist()
 				concept_cls = []
 				for concept in item['concept_set'].split('#'):
-					if concept in self.copy_vocab.word_to_category_id:
+					if concept in self.copy_vocab.word_to_category_id: # 如果输入的词语在word_to_category_id里头，就在concept_cls放word_to_category_id的id
 						concept_cls.append(self.copy_vocab.word_to_category_id[concept])
-					else:
+					else: # 否则，直接在concept_cls中放词语的token id 那么concept_cls是用来干什么的呢？
 						fg_index = self.copy_vocab.w_to_i[concept]
 						concept_cls.append(self.copy_vocab.i_to_cls[fg_index])
 
-				assert len(concept_cls) <= 5
+				assert len(concept_cls) <= 5 # 输入的词语数量一定是小于等于5的
 				start_pos = []
 				for i, c_cls in enumerate(concept_cls):
 					start_pos.append(len(concept_set_input_ids))
