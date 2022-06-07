@@ -289,9 +289,9 @@ if __name__ == "__main__":
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-    tokenizer = T5Tokenizer.from_pretrained(_C.lm_type, cache_dir='.')
-    copy_vocab = T5CopyVocabulary(_C.copy_vocab_path, tokenizer)
-    lm = get_lm_representation(_C, tokenizer, copy_vocab)
+    tokenizer = T5Tokenizer.from_pretrained(_C.lm_type, cache_dir='.') # _C.lm_type:t5-base
+    copy_vocab = T5CopyVocabulary(_C.copy_vocab_path, tokenizer) # _C.copy_vocab_path:./dataset/new_copy_vocab.txt, 类中有一些id 到 词语以及词语组的相互转换
+    lm = get_lm_representation(_C, tokenizer, copy_vocab) # 应该是用于从现有模型构建t5mf模型的函数
     model = lm['t5']
     model = model.to(device)
     _C.vocab_size = model.config.vocab_size
@@ -304,13 +304,13 @@ if __name__ == "__main__":
     total_parameter_count = 0
     trainable_parameter_count = 0
     for p in model.parameters():
-        total_parameter_count += p.numel()
+        total_parameter_count += p.numel() # .numel : return number of elements in a tensor
         if p.requires_grad:
             trainable_parameter_count += p.numel()
     print('Total Parameter Count %d' % total_parameter_count)
     print('Trainable Parameter Count %d' % trainable_parameter_count)
 
-    if _A.train:
+    if _A.train: # 这个写法还挺好，train和eval可以写在同一个文件里头。
         train_data = CommonGenDataset(_C, _C.train_path, tokenizer, copy_vocab, model.config.decoder_start_token_id, attachable_index=lm['attachable_index'], is_training=True)
         train_data_loader = get_data_loader(train_data, _C.batch_size)
         train_iter = iter(train_data_loader)
@@ -361,18 +361,18 @@ if __name__ == "__main__":
                         if n not in ['gt', 'gt_concepts']:
                             batch[n] = batch[n].to(device)
                     total_step += 1
-                    # optimizer.zero_grad()
+                    # optimizer.zero_grad() 输入的seq_length=17
                     outputs = model(
-                        input_ids=batch['input_ids'], 
+                        input_ids=batch['input_ids'], # 'generate a sentence with these concepts : block flat reflect'
                         attention_mask=batch['attention_mask'], 
-                        decoder_copy_pos=batch['copy_pos'],
-                        decoder_concept_cls=batch['concept_cls'],
-                        decoder_input_ids=batch['decoder_input_ids'],
+                        decoder_copy_pos=batch['copy_pos'], # 对于每条数据有[bs, 5, 16]的tensor，每行在出现需要copy的词的时候为1。
+                        decoder_concept_cls=batch['concept_cls'], # 感觉是关键词的分类id
+                        decoder_input_ids=batch['decoder_input_ids'], # [bs, 25]
                         decoder_attention_mask=batch['decoder_input_mask'],
-                        decoder_copy_mention_flag=batch['copy_mention_flag'],
-                        decoder_mention_flag=batch['decoder_mention_flag'],
-                        decoder_cls_on_input=batch['cls_on_input'],
-                        labels=batch['labels']
+                        decoder_copy_mention_flag=batch['copy_mention_flag'], # [bs, 25, 5]
+                        decoder_mention_flag=batch['decoder_mention_flag'], # [bs, 25, 16] 文章中提到的mf
+                        decoder_cls_on_input=batch['cls_on_input'], # [bs, 16] 应该是
+                        labels=batch['labels'] # [bs, 25]
                     )
                     loss = outputs.loss
                     loss = loss / _C.gradient_accumulation_steps

@@ -4,10 +4,10 @@ class T5CopyVocabulary(object):
 
     def __init__(self, vocab_path, tokenizer, sep=','):
         with open(vocab_path) as out:
-            self.d_to_w_group = {}
-            self.i_to_w = {}
-            self.w_to_i = {}
-            self.i_to_cls = {}
+            self.d_to_w_group = {} # group id to word group
+            self.i_to_w = {} # id to word
+            self.w_to_i = {} # word to id
+            self.i_to_cls = {} # word id to group id
             self.id_to_category = {}
             self.word_to_category_id = {}
             for idx, line in enumerate(out):
