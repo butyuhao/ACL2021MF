@@ -289,7 +289,7 @@ if __name__ == "__main__":
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-    tokenizer = T5Tokenizer.from_pretrained(_C.lm_type, cache_dir='.') # _C.lm_type:t5-base
+    tokenizer = T5Tokenizer.from_pretrained(pretrained_model_name_or_path=_C.lm_type) # _C.lm_type:t5-base
     copy_vocab = T5CopyVocabulary(_C.copy_vocab_path, tokenizer) # _C.copy_vocab_path:./dataset/new_copy_vocab.txt, 类中有一些id 到 词语以及词语组的相互转换
     lm = get_lm_representation(_C, tokenizer, copy_vocab) # 应该是用于从现有模型构建t5mf模型的函数
     model = lm['t5']
@@ -314,6 +314,7 @@ if __name__ == "__main__":
         train_data = CommonGenDataset(_C, _C.train_path, tokenizer, copy_vocab, model.config.decoder_start_token_id, attachable_index=lm['attachable_index'], is_training=True)
         train_data_loader = get_data_loader(train_data, _C.batch_size)
         train_iter = iter(train_data_loader)
+    print(f'len_train_data:{len(train_data)}')
 
     dev_data = CommonGenDataset(_C, _C.dev_path if (_A.validation or _A.train) else _C.test_path, tokenizer, copy_vocab, model.config.decoder_start_token_id)
     dev_data_loader = get_data_loader(dev_data, _C.batch_size)

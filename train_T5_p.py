@@ -1,5 +1,5 @@
 from dataset.vocabulary import T5CopyVocabulary
-from dataset.dataset import CommonGenDataset, get_data_loader
+from dataset.dataset import CommonGenDatasetP, get_data_loader
 import argparse
 import torch
 import torch.nn as nn
@@ -7,7 +7,7 @@ from config import Config
 import numpy as np
 from transformers import T5Tokenizer
 from checkpointing import CheckpointManager
-from t5 import get_lm_representation 
+from t5 import get_lm_representation
 import utils
 from tqdm import tqdm
 import math
@@ -19,7 +19,7 @@ from constraint import CBSConstraint
 from dataset.diversity import distinct_n
 import json
 
-nlp = spacy.load("en_core_web_sm")
+nlp = spacy.load("zh_core_web_sm")
 nlp.pipeline = [('tagger', nlp.tagger)]
 
 def tokenize(_list):
@@ -311,12 +311,14 @@ if __name__ == "__main__":
     print('Trainable Parameter Count %d' % trainable_parameter_count)
 
     if _A.train: # 这个写法还挺好，train和eval可以写在同一个文件里头。
-        train_data = CommonGenDataset(_C, _C.train_path, tokenizer, copy_vocab, model.config.decoder_start_token_id, attachable_index=lm['attachable_index'], is_training=True)
+        train_data = CommonGenDatasetP(_C, _C.train_path, tokenizer, copy_vocab, model.config.decoder_start_token_id, attachable_index=lm['attachable_index'], is_training=True)
         train_data_loader = get_data_loader(train_data, _C.batch_size)
         train_iter = iter(train_data_loader)
+        print(f'len_train_data:{len(train_data)}')
 
-    dev_data = CommonGenDataset(_C, _C.dev_path if (_A.validation or _A.train) else _C.test_path, tokenizer, copy_vocab, model.config.decoder_start_token_id)
+    dev_data = CommonGenDatasetP(_C, _C.dev_path if (_A.validation or _A.train) else _C.test_path, tokenizer, copy_vocab, model.config.decoder_start_token_id)
     dev_data_loader = get_data_loader(dev_data, _C.batch_size)
+    print(f'len_dev_data:{len(dev_data)}')
 
     print(_C)
     for arg in vars(_A):
@@ -351,6 +353,7 @@ if __name__ == "__main__":
 
             with tqdm(total=math.ceil(run_step / _C.gradient_accumulation_steps), file=sys.stdout) as pbar:
                 for step in range(run_step):
+                    torch.cuda.empty_cache()
                     try:
                         batch = next(train_iter)
                     except:
